@@ -4,26 +4,23 @@ let apiEvent = {};
 
 exports.handler = async (event, context) => {
   try {
-    // Extract userData from the POST request body
-    // const { id, email, name, given_name, family_name, picture } = JSON.parse(event.body);
     const data = JSON.parse(event.body);
     apiEvent = {
       version: "2.0",
-      routeKey: "POST /login/google", 
+      routeKey: "POST /login/google",
       userData: {
-        id: data.userData.id, // id from the request body
-        email: data.userData.email, // email from the request body
-        name: data.userData.name, // name from the request body
-        given_name: data.userData.given_name, // given_name from the request body
-        family_name: data.userData.family_name, // family_name from the request body
-        picture: data.userData.picture, // picture from the request body
+        id: data.userData.id,
+        email: data.userData.email,
+        name: data.userData.name,
+        given_name: data.userData.given_name,
+        family_name: data.userData.family_name,
+        picture: data.userData.picture,
       },
-      isBase64Encoded: true, // Or set based on your requirements
+      isBase64Encoded: true,
     };
 
-    // Hauptfunktion aufrufen
-    await main(); 
-    // Send a response back to the frontend
+    await main();
+
     return {
       statusCode: 200,
       headers: {
@@ -31,7 +28,6 @@ exports.handler = async (event, context) => {
       },
       body: JSON.stringify({ message: "UserData processed", apiEvent }),
     };
-
   } catch (error) {
     console.error(error);
     event.status(500).send("Error processing request");
@@ -52,21 +48,15 @@ const main = async () => {
     await sequelize.authenticate();
     console.log("Connection has been established successfully.");
 
-    // Nutzer hinzufügen
     const ed = apiEvent.userData;
 
-    // console.log(apiEvent.userData)
-
-    // Check if user already exists in the database
     const [existingUser, _] = await sequelize.query(`
       SELECT * FROM User WHERE UserID = '${ed.id}'
     `);
 
     if (existingUser.length > 0) {
-      // User is already in the database
       console.log("User vorhanden");
     } else {
-      // User is not in the database, add new entry
       await sequelize.query(`
         INSERT INTO User (UserID, RealName, EmailAddress, BirthDate, Course, AuthProvider, ProfileImg)
         VALUES ('${ed.id}', '${ed.name}', '${ed.email}', null, null, null, '${ed.picture}')
@@ -84,8 +74,6 @@ const main = async () => {
     }
 
     const [results, metadata] = await sequelize.query("SELECT * FROM User");
-    // console.log(results);
-    // console.log(metadata);
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
