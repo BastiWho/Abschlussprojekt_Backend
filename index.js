@@ -1,42 +1,42 @@
-import Sequelize from "sequelize";
+const Sequelize = require("sequelize");
 
 let apiEvent = {};
 
 exports.handler = async (event, context) => {
   try {
-    // console.log('this is the req.body ' + req.body)
     // Extract userData from the POST request body
-    const { id, email, name, given_name, family_name, picture } =
-      event.body.userData;
-
-      apiEvent = {
-        version: "2.0",
-        routeKey: "POST /login/google", // Update this line
-        userData: {
-          id, // id from the request body
-          email, // email from the request body
-          name, // name from the request body
-          given_name, // given_name from the request body
-          family_name, // family_name from the request body
-          picture, // picture from the request body
-        },
-        isBase64Encoded: true, // Or set based on your requirements
-      };
-
-    // Process the apiEvent as needed
- // console.log(apiEvent);
-
-    // Send a response back to the frontend
-    event.status(200).json({ message: "UserData processed", apiEvent });
+    // const { id, email, name, given_name, family_name, picture } = JSON.parse(event.body);
+    const data = JSON.parse(event.body);
+    apiEvent = {
+      version: "2.0",
+      routeKey: "POST /login/google", 
+      userData: {
+        id: data.userData.id, // id from the request body
+        email: data.userData.email, // email from the request body
+        name: data.userData.name, // name from the request body
+        given_name: data.userData.given_name, // given_name from the request body
+        family_name: data.userData.family_name, // family_name from the request body
+        picture: data.userData.picture, // picture from the request body
+      },
+      isBase64Encoded: true, // Or set based on your requirements
+    };
 
     // Hauptfunktion aufrufen
-    main();
+    await main(); 
+    // Send a response back to the frontend
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: "UserData processed", apiEvent }),
+    };
+
   } catch (error) {
     console.error(error);
     event.status(500).send("Error processing request");
   }
 };
-
 
 const sequelize = new Sequelize({
   dialect: process.env.TSNET_DB_DIALECT,
@@ -48,13 +48,12 @@ const sequelize = new Sequelize({
 });
 
 const main = async () => {
-
   try {
     await sequelize.authenticate();
     console.log("Connection has been established successfully.");
 
     // Nutzer hinzufügen
-    const ed = apiEvent.userData;  
+    const ed = apiEvent.userData;
 
     // console.log(apiEvent.userData)
 
