@@ -1,17 +1,7 @@
 {
-    "function_name": "login-google",
-    "http_methode": "POST",
-    "route": "login/google",
-    "env_vars": {
-        "TSNET_DB_DIALECT": "",
-        "TSNET_DB_HOST": "",
-        "TSNET_DB_PORT": "",
-        "TSNET_DB_NAME": "",
-        "TSNET_DB_USER": "",
-        "TSNET_DB_PASSWORD": ""
-    },
-    "policies": {
-    },
+    "function_name": "get-news",
+    "http_methode": "GET",
+    "route": "/newsfeed",
     "meta": { 
         "package_type": "zip",
         "tags": {
