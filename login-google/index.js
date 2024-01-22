@@ -1,4 +1,5 @@
 const Sequelize = require("sequelize");
+const { v4: uuidv4} = require("uuid");
 
 let apiEvent = {};
 
@@ -8,29 +9,27 @@ exports.handler = async (event, context) => {
     apiEvent = {
       version: "2.0",
       routeKey: "POST /login/google",
-      userData: {
-        id: data.userData.id,
-        email: data.userData.email,
-        name: data.userData.name,
-        given_name: data.userData.given_name,
-        family_name: data.userData.family_name,
-        picture: data.userData.picture,
-      },
+      accessToken: "",
       isBase64Encoded: true,
     };
 
-    await main();
+    let mainResponse = await main();
+    mainResponse["Status"] = "OK";
+    mainResponse["Message"] = "Soweit wissen wir nicht was schief gegangen ist, sollte man vielleicht mal ändern";
 
     return {
       statusCode: 200,
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ message: "UserData processed", apiEvent }),
+      body: JSON.stringify( mainResponse ),
     };
   } catch (error) {
     console.error(error);
-    event.status(500).send("Error processing request");
+    return {
+      statusCode: 500,
+      body: JSON.stringify( error ),
+    };    
   }
 };
 
@@ -48,26 +47,59 @@ const main = async () => {
     await sequelize.authenticate();
     console.log("Connection has been established successfully.");
 
-    const ed = apiEvent.userData;
+
+    async function fetchgoogledata(accessToken) {
+      try {
+        const response = await fetch(
+          "https://www.googleapis.com/oauth2/v3/userinfo",
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+        console.log(response);
+        const data = await response.json();
+        console.log("Google Data:", data);
+        return data;
+      } catch (error) {
+        console.error("Fehler beim Abrufen von Google-Benutzerdaten.", error);
+        return null;
+      }
+    };
+
+    let ed = fetchgoogledata(apiEvent.accessToken);
+    let frontendantwort = {};
+
+    const newSessionUUID = uuidv4();
+    frontendantwort["sessionData"] = newSessionUUID;
+
+    // const [session] = await sequelize.query(`
+    //   INSERT INTO Session (UUID, Name) 
+    //   VALUES ('${newSessionUUID}', '${ed.name}')
+    // `);
 
     const [existingUser, _] = await sequelize.query(`
       SELECT * FROM User WHERE UserID = '${ed.id}'
     `);
 
+    
     if (existingUser.length > 0) {
       console.log("User vorhanden");
+      frontendantwort["isNewUser"] = false;
     } else {
+      frontendantwort["isNewUser"] = true;
       await sequelize.query(`
         INSERT INTO User (UserID, RealName, EmailAddress, BirthDate, Course, AuthProvider, ProfileImg)
         VALUES ('${ed.id}', '${ed.name}', '${ed.email}', null, null, null, '${ed.picture}')
         ON DUPLICATE KEY UPDATE
-          UserID = VALUES(UserID),
-          EmailAddress = VALUES(EmailAddress),
-          RealName = VALUES(RealName),
-          BirthDate = VALUES(BirthDate),
-          Course = VALUES(Course),
-          AuthProvider = VALUES(AuthProvider),
-          ProfileImg = VALUES(ProfileImg);
+        UserID = VALUES(UserID),
+        EmailAddress = VALUES(EmailAddress),
+        RealName = VALUES(RealName),
+        BirthDate = VALUES(BirthDate),
+        Course = VALUES(Course),
+        AuthProvider = VALUES(AuthProvider),
+        ProfileImg = VALUES(ProfileImg);
       `);
 
       console.log("Neuer Eintrag in der Datenbank erstellt");
@@ -77,4 +109,5 @@ const main = async () => {
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
+  return frontendantwort
 };
