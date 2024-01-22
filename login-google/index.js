@@ -1,37 +1,68 @@
-const { Sequelize } = require('sequelize');
+const Sequelize = require("sequelize");
 
-const sequelize = new Sequelize({
-  dialect: process.env.DIALECT,
-  host: process.env.HOST,
-  database: process.env.DATABASE,
-  port: process.env.PORT,
-  username: process.env.TSNET_DB_USER,
-  password: process.env.PASSWORD,
-});
+let apiEvent = {};
 
 exports.handler = async (event, context) => {
+  try {
+    const data = JSON.parse(event.body);
+    apiEvent = {
+      version: "2.0",
+      routeKey: "POST /login/google",
+      userData: {
+        id: data.userData.id,
+        email: data.userData.email,
+        name: data.userData.name,
+        given_name: data.userData.given_name,
+        family_name: data.userData.family_name,
+        picture: data.userData.picture,
+      },
+      isBase64Encoded: true,
+    };
+
+    await main();
+
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ message: "UserData processed", apiEvent }),
+    };
+  } catch (error) {
+    console.error(error);
+    event.status(500).send("Error processing request");
+  }
+};
+
+const sequelize = new Sequelize({
+  dialect: process.env.TSNET_DB_DIALECT,
+  host: process.env.TSNET_DB_HOST,
+  database: process.env.TSNET_DB_DATABASE,
+  port: process.env.TSNET_DB_PORT,
+  username: process.env.TSNET_DB_USER,
+  password: process.env.TSNET_DB_PASSWORD,
+});
+
+const main = async () => {
   try {
     await sequelize.authenticate();
     console.log("Connection has been established successfully.");
 
-    const token = event.queryStringParameters.token;
-    
-    // UserInfos von Google abholen
-    const urlGoogleApi = `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${token}`;
-    let res = await fetch(urlGoogleApi);
-    res = await res.json();
+    const ed = apiEvent.userData;
 
-    let response;
-    if (res.id) {
-      // ALLES SUPER, wir haben die Infos nach Schema
-      console.log("GOOGLE-SUCCESS: " + JSON.stringify(res));
+    const [existingUser, _] = await sequelize.query(`
+      SELECT * FROM User WHERE UserID = '${ed.id}'
+    `);
 
-      // Nutzer hinzufügen
+    if (existingUser.length > 0) {
+      console.log("User vorhanden");
+    } else {
       await sequelize.query(`
         INSERT INTO User (UserID, RealName, EmailAddress, BirthDate, Course, AuthProvider, ProfileImg)
-        VALUES ('${res.id}', '${res.name}', '${res.email}', null, null, null, '${res.picture}')
+        VALUES ('${ed.id}', '${ed.name}', '${ed.email}', null, null, null, '${ed.picture}')
         ON DUPLICATE KEY UPDATE
           UserID = VALUES(UserID),
+          EmailAddress = VALUES(EmailAddress),
           RealName = VALUES(RealName),
           BirthDate = VALUES(BirthDate),
           Course = VALUES(Course),
@@ -39,32 +70,11 @@ exports.handler = async (event, context) => {
           ProfileImg = VALUES(ProfileImg);
       `);
 
-      const [results, metadata] = await sequelize.query("SELECT * FROM User");
-      console.log(results);
-
-      response = {
-        statusCode: 200,
-        body: JSON.stringify(res),
-      };
-    } else {
-      // FAIL, Auth-Prozess gescheitert
-      console.log("GOOGLE-ERROR: " + JSON.stringify(res));
-      response = {
-        statusCode: 401,
-        body: JSON.stringify({
-          message: "Error while Authenticating. Please retry.",
-        }),
-      };
+      console.log("Neuer Eintrag in der Datenbank erstellt");
     }
 
-    return response;
+    const [results, metadata] = await sequelize.query("SELECT * FROM User");
   } catch (error) {
     console.error("Unable to connect to the database:", error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        message: "Internal Server Error",
-      }),
-    };
   }
 };
