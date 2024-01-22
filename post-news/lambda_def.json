@@ -1,0 +1,12 @@
+{
+    "function_name": "post-news",
+    "http_methode": "POST",
+    "route": "/newsfeed",
+    "meta": { 
+        "package_type": "zip",
+        "tags": {
+            "environment": "dev",
+            "deploy": "terraform"
+            } 
+        }
+}
