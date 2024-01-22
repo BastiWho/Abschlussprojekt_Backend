@@ -7,16 +7,13 @@ exports.handler = async (event, context) => {
     const data = JSON.parse(event.body);
     apiEvent = {
       version: "2.0",
-      routeKey: "POST /login/google",
-      userData: {
+      routeKey: "GET /newsfeed",
+      postData: {
+        postid: data.postData.postid,
         id: data.userData.id,
-        email: data.userData.email,
-        name: data.userData.name,
-        given_name: data.userData.given_name,
-        family_name: data.userData.family_name,
-        birthdate: data.userData.birthdate,
-        course: data.userData.course,
-        picture: data.userData.picture,
+        time: data.userData.time,
+        content: data.userData.content,   
+        media: data.userData.media,
       },
       isBase64Encoded: true,
     };
@@ -28,7 +25,7 @@ exports.handler = async (event, context) => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ message: "UserData processed", apiEvent }),
+      body: JSON.stringify({ message: "PostData processed", apiEvent }),
     };
   } catch (error) {
     console.error(error);
@@ -53,29 +50,27 @@ const main = async () => {
     const ed = apiEvent.userData;
 
     const [existingUser, _] = await sequelize.query(`
-      SELECT * FROM User WHERE UserID = '${ed.id}'
+      SELECT * FROM Post WHERE PostID = '${ed.postid}'
     `);
 
     if (existingUser.length > 0) {
-      console.log("User vorhanden");
+      console.log("Post vorhanden");
     } else {
       await sequelize.query(`
-        INSERT INTO User (UserID, RealName, EmailAddress, BirthDate, Course, AuthProvider, ProfileImg)
-        VALUES ('${ed.id}', '${ed.name}', '${ed.email}', '${ed.birthdate}', '${ed.course}', null, '${ed.picture}')
+        INSERT INTO User (PostID, UserID, TimeAndDate, Content, MediaLink)
+        VALUES ('${ed.postid}', '${ed.id}', '${ed.time}', '${ed.content}', '${ed.media}')
         ON DUPLICATE KEY UPDATE
+          PostID = VALUES(PostID),
           UserID = VALUES(UserID),
-          EmailAddress = VALUES(EmailAddress),
-          RealName = VALUES(RealName),
-          BirthDate = VALUES(BirthDate),
-          Course = VALUES(Course),
-          AuthProvider = VALUES(AuthProvider),
-          ProfileImg = VALUES(ProfileImg);
+          TimeAndDate = VALUES(TimeAndDate),
+          Content = VALUES(Content),
+          MediaLink = VALUES(MediaLink)
       `);
 
-      console.log("Neuer Eintrag in der Datenbank erstellt");
+      console.log("Post vorhanden.");
     }
 
-    const [results, metadata] = await sequelize.query("SELECT * FROM User");
+    const [results, metadata] = await sequelize.query("SELECT * FROM Post");
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
