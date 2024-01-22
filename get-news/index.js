@@ -50,7 +50,7 @@ const main = async () => {
     const ed = apiEvent.userData;
 
     const [existingUser, _] = await sequelize.query(`
-      SELECT * FROM Post WHERE PostID = '${ed.postid}'
+      GET * FROM Post WHERE PostID = '${ed.postid}'
     `);
 
     if (existingUser.length > 0) {
@@ -70,7 +70,7 @@ const main = async () => {
       console.log("Post vorhanden.");
     }
 
-    const [results, metadata] = await sequelize.query("SELECT * FROM Post");
+    const [results, metadata] = await sequelize.query("GET * FROM Post");
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
