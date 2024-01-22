@@ -14,6 +14,8 @@ exports.handler = async (event, context) => {
         name: data.userData.name,
         given_name: data.userData.given_name,
         family_name: data.userData.family_name,
+        birthdate: data.userData.birthdate,
+        course: data.userData.course,
         picture: data.userData.picture,
       },
       isBase64Encoded: true,
@@ -59,7 +61,7 @@ const main = async () => {
     } else {
       await sequelize.query(`
         INSERT INTO User (UserID, RealName, EmailAddress, BirthDate, Course, AuthProvider, ProfileImg)
-        VALUES ('${ed.id}', '${ed.name}', '${ed.email}', null, null, null, '${ed.picture}')
+        VALUES ('${ed.id}', '${ed.name}', '${ed.email}', '${ed.birthdate}', '${ed.course}', null, '${ed.picture}')
         ON DUPLICATE KEY UPDATE
           UserID = VALUES(UserID),
           EmailAddress = VALUES(EmailAddress),
