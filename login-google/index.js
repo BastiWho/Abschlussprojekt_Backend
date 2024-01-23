@@ -25,6 +25,7 @@ exports.handler = async (event, context) => {
       console.log(error);
     });
  
+    
     // data = await data.json();
   // const data = await response.json();
   console.log("Google Data:");
