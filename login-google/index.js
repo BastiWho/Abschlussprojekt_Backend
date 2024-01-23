@@ -5,7 +5,7 @@ let apiEvent = {};
 
 exports.handler = async (event, context) => {
   try {
-    console.log(data);
+    console.log(event);
     const data = JSON.parse(event.body);
     console.log(data);
     // apiEvent = {
