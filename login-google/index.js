@@ -1,19 +1,22 @@
 const Sequelize = require("sequelize");
-const { v4: uuidv4} = require("uuid");
+const { v4: uuidv4 } = require("uuid");
 
 let apiEvent = {};
 
 exports.handler = async (event, context) => {
   try {
+    console.log(data);
     const data = JSON.parse(event.body);
-    apiEvent = {
-      version: "2.0",
-      routeKey: "POST /login/google",
-      accessToken: "",
-      isBase64Encoded: true,
-    };
+    console.log(data);
+    // apiEvent = {
+    //   version: "2.0",
+    //   routeKey: "POST /login/google",
+    //   accessToken: "",
+    //   isBase64Encoded: true,
+    // };
+    let accessToken = data.accessToken;
 
-    let mainResponse = await main();
+    let mainResponse = await main(accessToken);
     mainResponse["Status"] = "OK";
     mainResponse["Message"] = "Soweit wissen wir nicht was schief gegangen ist, sollte man vielleicht mal ändern";
 
@@ -22,14 +25,14 @@ exports.handler = async (event, context) => {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify( mainResponse ),
+      body: JSON.stringify(mainResponse),
     };
   } catch (error) {
     console.error(error);
     return {
       statusCode: 500,
-      body: JSON.stringify( error ),
-    };    
+      body: JSON.stringify(error),
+    };
   }
 };
 
@@ -42,7 +45,7 @@ const sequelize = new Sequelize({
   password: process.env.TSNET_DB_PASSWORD,
 });
 
-const main = async () => {
+const main = async (accessToken) => {
   try {
     await sequelize.authenticate();
     console.log("Connection has been established successfully.");
@@ -68,27 +71,38 @@ const main = async () => {
       }
     };
 
-    let ed = fetchgoogledata(apiEvent.accessToken);
+    let ed = fetchgoogledata(accessToken);
     let frontendantwort = {};
 
     const newSessionUUID = uuidv4();
     frontendantwort["sessionData"] = newSessionUUID;
 
-    // const [session] = await sequelize.query(`
-    //   INSERT INTO Session (UUID, Name) 
-    //   VALUES ('${newSessionUUID}', '${ed.name}')
-    // `);
+    try {
+      const [session] = await sequelize.query(`
+      INSERT INTO Session (UUID, Name) 
+      VALUES ('${newSessionUUID}', '${ed.name}')
+    `);
+    } catch (error) {
+      console.log("Derzeit noch kein Session Management");
+      console.log(error);
+      // console.log("Session bereits vorhanden");
+    }
 
-    const [existingUser, _] = await sequelize.query(`
+    try {
+      const [existingUser, _] = await sequelize.query(`
       SELECT * FROM User WHERE UserID = '${ed.id}'
     `);
+    } catch (error) {
+      console.log("Error at Finde User in DB");
+    }
 
-    
+
     if (existingUser.length > 0) {
       console.log("User vorhanden");
       frontendantwort["isNewUser"] = false;
     } else {
       frontendantwort["isNewUser"] = true;
+      try {
       await sequelize.query(`
         INSERT INTO User (UserID, RealName, EmailAddress, BirthDate, Course, AuthProvider, ProfileImg)
         VALUES ('${ed.id}', '${ed.name}', '${ed.email}', null, null, null, '${ed.picture}')
@@ -101,11 +115,14 @@ const main = async () => {
         AuthProvider = VALUES(AuthProvider),
         ProfileImg = VALUES(ProfileImg);
       `);
+      } catch(error) {
+        console.log("Error at Insert User in DB");
+        console.log(error);
+      }
 
       console.log("Neuer Eintrag in der Datenbank erstellt");
     }
-
-    const [results, metadata] = await sequelize.query("SELECT * FROM User");
+    // const [results, metadata] = await sequelize.query("SELECT * FROM User");
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
