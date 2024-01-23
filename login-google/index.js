@@ -6,19 +6,13 @@ let apiEvent = {};
 exports.handler = async (event, context) => {
   try {
     console.log(event);
-    const data = JSON.parse(event.body);
-    console.log(data);
-    // apiEvent = {
-    //   version: "2.0",
-    //   routeKey: "POST /login/google",
-    //   accessToken: "",
-    //   isBase64Encoded: true,
-    // };
-    let accessToken = data.accessToken;
+    const accessToken = JSON.parse(event.body);
+    console.log(accessToken);
 
     let mainResponse = await main(accessToken);
     mainResponse["Status"] = "OK";
-    mainResponse["Message"] = "Soweit wissen wir nicht was schief gegangen ist, sollte man vielleicht mal ändern";
+    mainResponse["Message"] =
+      "Soweit wissen wir nicht was schief gegangen ist, sollte man vielleicht mal ändern";
 
     return {
       statusCode: 200,
@@ -50,28 +44,23 @@ const main = async (accessToken) => {
     await sequelize.authenticate();
     console.log("Connection has been established successfully.");
 
-
     async function fetchgoogledata(accessToken) {
       try {
         const response = await fetch(
-          "https://www.googleapis.com/oauth2/v3/userinfo",
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
+          `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`
         );
         console.log(response);
         const data = await response.json();
         console.log("Google Data:", data);
         return data;
       } catch (error) {
-        console.error("Fehler beim Abrufen von Google-Benutzerdaten.", error);
+        console.error("Fehler beim Abrufen von Google-Benutzerdaten.");
+        console.log(error);
         return null;
       }
-    };
+    }
 
-    let ed = fetchgoogledata(accessToken);
+    let ed = await fetchgoogledata(accessToken);
     let frontendantwort = {};
 
     const newSessionUUID = uuidv4();
@@ -96,14 +85,13 @@ const main = async (accessToken) => {
       console.log("Error at Finde User in DB");
     }
 
-
     if (existingUser.length > 0) {
       console.log("User vorhanden");
       frontendantwort["isNewUser"] = false;
     } else {
       frontendantwort["isNewUser"] = true;
       try {
-      await sequelize.query(`
+        await sequelize.query(`
         INSERT INTO User (UserID, RealName, EmailAddress, BirthDate, Course, AuthProvider, ProfileImg)
         VALUES ('${ed.id}', '${ed.name}', '${ed.email}', null, null, null, '${ed.picture}')
         ON DUPLICATE KEY UPDATE
@@ -115,7 +103,7 @@ const main = async (accessToken) => {
         AuthProvider = VALUES(AuthProvider),
         ProfileImg = VALUES(ProfileImg);
       `);
-      } catch(error) {
+      } catch (error) {
         console.log("Error at Insert User in DB");
         console.log(error);
       }
@@ -126,5 +114,5 @@ const main = async (accessToken) => {
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
-  return frontendantwort
+  return frontendantwort;
 };
