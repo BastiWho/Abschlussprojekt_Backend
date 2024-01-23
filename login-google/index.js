@@ -4,30 +4,47 @@ const { v4: uuidv4 } = require("uuid");
 let apiEvent = {};
 
 exports.handler = async (event, context) => {
-  try {
-    console.log(event);
-    const accessToken = JSON.parse(event.body);
-    console.log(accessToken);
+  console.log(event);
+  const body = JSON.parse(event.body);
+  console.log(body.accessToken);
+  const accessToken = body.accessToken;
 
-    let mainResponse = await main(accessToken);
-    mainResponse["Status"] = "OK";
-    mainResponse["Message"] =
-      "Soweit wissen wir nicht was schief gegangen ist, sollte man vielleicht mal ändern";
+  console.log("Fetching Google-Data");
+  const url = `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`;
+  console.log(url);
+  // const response = await fetch(url);
+  let data;
+  fetch(url)
+    .then((response) => {
+      console.log("Response:");
+      data = response;
+      console.log(response);
+    })
+    .catch((error) => {
+      console.log("Error:");
+      console.log(error);
+    });
+ 
+    // data = await data.json();
+  // const data = await response.json();
+  console.log("Google Data:");
+  console.log(data);
 
-    return {
-      statusCode: 200,
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(mainResponse),
-    };
-  } catch (error) {
-    console.error(error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify(error),
-    };
-  }
+  // let ed = await fetchgoogledata(accessToken);
+
+  // console.log(ed);
+
+  // let mainResponse = await main(accessToken);
+  // mainResponse["Status"] = "OK";
+  // mainResponse["Message"] = "Soweit wissen wir nicht was schief gegangen ist, sollte man vielleicht mal ändern";
+
+  return {
+    statusCode: 200,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  };
 };
 
 const sequelize = new Sequelize({
@@ -44,24 +61,6 @@ const main = async (accessToken) => {
     await sequelize.authenticate();
     console.log("Connection has been established successfully.");
 
-    async function fetchgoogledata(accessToken) {
-      try {
-        const response = await fetch(
-          `https://www.googleapis.com/oauth2/v3/userinfo?access_token=${accessToken}`
-        );
-        console.log(response);
-        const data = await response.json();
-        console.log("Google Data:", data);
-        return data;
-      } catch (error) {
-        console.error("Fehler beim Abrufen von Google-Benutzerdaten.");
-        console.log(error);
-        return null;
-      }
-    }
-    
-
-    let ed = await fetchgoogledata(accessToken);
     let frontendantwort = {};
 
     const newSessionUUID = uuidv4();
