@@ -11,55 +11,58 @@ exports.handler = async (event, context) => {
 
   console.log("Fetching Google-Data");
   const url = `https://www.googleapis.com/oauth2/v1/userinfo?access_token=${accessToken}`;
+  console.log(url);
   // let data;
-  try {
-    const fetch1 = await fetch(url);
-    console.log("################# FETCH1 #################");
-    console.log(fetch1);
-  } catch (error) {
-    console.log("Error:");
-    console.log(error);
-  }
-  // .then((response) => {
-  //   console.log("Response:");
-  //   data = response;
-  //   console.log(response);
-  // })
-  // .catch((error) => {
-  //   console.log("Error:");
-  //   console.log(error);
-  // });
-  const url2 = `https://www.googleapis.com/oauth2/v3/tokeninfo?`;
-  try {
-    const fetch2 = await fetch("https://www.googleapis.com/oauth2/v3/userinfo",
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
-    console.log("################# FETCH2 #################");
-    console.log(fetch2);
-  } catch (error) {
-    console.log("Error:");
-    console.log(error);
-  }
-  // data = await data.json();
-  // const data = await response.json();
-  // console.log("Google Data:");
-  // console.log(data);
-  // let ed = await fetchgoogledata(accessToken);
-  // console.log(ed);
-  // let mainResponse = await main(accessToken);
-  // mainResponse["Status"] = "OK";
-  // mainResponse["Message"] = "Soweit wissen wir nicht was schief gegangen ist, sollte man vielleicht mal ändern";
-  return {
-    statusCode: 200,
+  // try {
+  const fetch1 = await fetch(url);
+  console.log("################# FETCH1 #################");
+  console.log(fetch1);
+  fetch(url)
+  .then((response) => {
+    console.log("Response:");
+    data = response;
+    console.log(response);
+  })
+    .catch((error) => {
+      console.log("Error:");
+      console.log(error);
+    });
+// } catch (error) {
+//   console.log("Error:");
+//   console.log(error);
+// }
+
+const url2 = `https://www.googleapis.com/oauth2/v3/tokeninfo?`;
+// try {
+const fetch2 = await fetch("https://www.googleapis.com/oauth2/v3/userinfo",
+  {
     headers: {
-      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify(data),
-  };
+  }
+);
+console.log("################# FETCH2 #################");
+console.log(fetch2);
+// } catch (error) {
+//   console.log("Error:");
+//   console.log(error);
+// }
+// data = await data.json();
+// const data = await response.json();
+// console.log("Google Data:");
+// console.log(data);
+// let ed = await fetchgoogledata(accessToken);
+// console.log(ed);
+// let mainResponse = await main(accessToken);
+// mainResponse["Status"] = "OK";
+// mainResponse["Message"] = "Soweit wissen wir nicht was schief gegangen ist, sollte man vielleicht mal ändern";
+return {
+  statusCode: 200,
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify(data),
+};
 };
 // const sequelize = new Sequelize({
 //   dialect: process.env.TSNET_DB_DIALECT,
@@ -82,7 +85,7 @@ exports.handler = async (event, context) => {
 
 //     try {
 //       const [session] = await sequelize.query(`
-//       INSERT INTO Session (UUID, Name) 
+//       INSERT INTO Session (UUID, Name)
 //       VALUES ('${newSessionUUID}', '${ed.name}')
 //     `);
 //     } catch (error) {
