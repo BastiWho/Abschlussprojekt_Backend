@@ -5,13 +5,14 @@ const { v4: uuidv4 } = require("uuid");
 exports.handler = async (event) => {
     const body = JSON.parse(event.body);
     console.log(body);
+    const googleUserData = body.user;
+    const googleToken = body.accessToken;
     const antwortFrontend = {
         status: "ok",
         message: "",
         steps: {}
     };
 
-    let googleUserData = {};
     console.log("################# DATABASE PART #################");
     console.log("Connecting to database...");
     const sequelize = new Sequelize({
@@ -22,42 +23,38 @@ exports.handler = async (event) => {
         username: process.env.TSNET_DB_USER,
         password: process.env.TSNET_DB_PASSWORD
     });
-    console.log(sequelize);
+
+    await sequelize.authenticate();
+    console.log("Connection has been established successfully.");
+    // } catch (error) {
+    //     console.log("Error at Sequelize");
+    //     console.log(error);
+    //     antwortFrontend.status = "error";
+    //     antwortFrontend.steps.database = JSON.stringify(error);
+    //     console.error("Unable to connect to the database:", error);
     // }
-    try {
-        await sequelize.authenticate();
-        console.log("Connection has been established successfully.");
-    } catch (error) {
-        console.log("Error at Sequelize");
-        console.log(error);
-        antwortFrontend.status = "error";
-        antwortFrontend.steps.database = error;
-        console.error("Unable to connect to the database:", error);
-    }
 
     const newSessionUUID = uuidv4();
     antwortFrontend["sessionData"] = newSessionUUID;
     try {
         const [session, _] = await sequelize.query(`
-                INSERT INTO Session (UUID, Name)
-                VALUES ('${newSessionUUID}', '${googleUserData.name}')
+                INSERT INTO Session (UUID, Name, Token, CreatedAt, UpdatedAt)
+                VALUES ('${newSessionUUID}', '${googleUserData.name}', '${googleToken}', '${new Date().toISOString()}', '${new Date().toISOString()}' )
                 `);
         antwortFrontend.steps.session = "ok";
     } catch (error) {
         console.log("Derzeit noch kein Session Management");
         console.log(error);
         antwortFrontend.status = "error";
-        antwortFrontend.steps.session = error;
+        antwortFrontend.steps.session = JSON.stringify(error);
     }
     try {
-        const [existingUser, _] = await sequelize.query(`
-                SELECT * FROM User WHERE UserID = '${googleUserData.id}'
-                `);
+        const [existingUser, _] = await sequelize.query(` SELECT * FROM User WHERE GoogleUserID = '${googleUserData.id}' `);
         antwortFrontend.steps.existingUser = "ok";
     } catch (error) {
         console.log("Error at Finde User in DB");
         antwortFrontend.status = "error";
-        antwortFrontend.steps.existingUser = error;
+        antwortFrontend.steps.existingUser = JSON.stringify(error);
     }
 
     if (existingUser.length > 0) {
@@ -66,22 +63,14 @@ exports.handler = async (event) => {
         antwortFrontend.isNewUser = true;
         try {
             const [insertUser, _] = await sequelize.query(`
-                    INSERT INTO User (UserID, RealName, EmailAddress, BirthDate, Course, AuthProvider, ProfileImg)
-                    VALUES ('${googleUserData.id}', '${googleUserData.name}', '${googleUserData.email}', null, null, null, '${googleUserData.picture}')
-                    ON DUPLICATE KEY UPDATE
-                    UserID = VALUES(UserID),
-                    EmailAddress = VALUES(EmailAddress),
-                    RealName = VALUES(RealName),
-                    BirthDate = VALUES(BirthDate),
-                    Course = VALUES(Course),
-                    AuthProvider = VALUES(AuthProvider),
-                    ProfileImg = VALUES(ProfileImg);
+                    INSERT INTO User (UserID, GoogleID, RealName, EmailAddress, BirthDate, Course, AuthProvider, ProfileImg)
+                    VALUES ('${sequelize.uuidv4}', '${googleUserData.id}', '${googleUserData.name}', '${googleUserData.email}', null, null, "google", '${googleUserData.picture}')
                 `);
             antwortFrontend.steps.insertUser = "ok";
             antwortFrontend.steps.insertUserMessage = JSON.stringify(insertUser);
         } catch (error) {
             antwortFrontend.status = "error";
-            antwortFrontend.steps.insertUser = error;
+            antwortFrontend.steps.insertUser = JSON.stringify(error);
         }
     }
     console.log("################# Antwort an Frontend #################");
